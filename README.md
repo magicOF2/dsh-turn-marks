@@ -6,7 +6,7 @@
 Claude Code / Codex 桌面端同款「左侧消息条条」：每发一条消息就多一根小条，
 点击跳转到该消息，悬停预览内容，当前消息对应的条条变白。
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/magicOF2/dsh-turn-marks)
+[![Version](https://img.shields.io/badge/version-0.1.1-blue)](https://github.com/magicOF2/dsh-turn-marks)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-web-lightgrey)](https://github.com/magicOF2/dsh-turn-marks)
 
@@ -17,7 +17,8 @@ Claude Code / Codex 桌面端同款「左侧消息条条」：每发一条消息
 ## ✨ 特性 / Features
 
 - **每段一条**：你在会话里每发送一条消息（用户消息 / turn），左侧就多一根灰色小条
-- **点击跳转**：点任意一根条条，会话框平滑滚动到你发送那条消息的位置
+- **密集排列**：条条间距紧凑（上限 24px），消息少时聚拢在轨道中部，消息多时自适应填满，方便点选
+- **点击跳转**：点任意一根条条，会话框平滑滚动，让那条消息**对齐视口最上方**（内容不足时尽可能靠上并完整显示下方内容）
 - **选中变白**：点击过的（以及当前正显示在视口里的）条条变成白色，其余保持灰色
 - **悬停预览**：鼠标悬停在条条上，弹出气泡显示该条消息的时间与内容预览（前 180 字）
 - **跟随滚动**：手动滚动会话时，白色条条会自动跟随当前视口内的消息
@@ -98,10 +99,14 @@ dsh plugin --profile web add link:C:/Users/<你的用户名>/.dsh/external/dsh-t
 
 - 条条轨道是 **`position: fixed`** 的悬浮条，贴住 scrollport 左缘；
   用 `ResizeObserver` + `resize` 事件重新测量几何，保证窗口/布局变化后仍对齐
-- 每条用户消息在轨道上**等距分布**（与桌面端截图观感一致）
+- **密集排列**：条条按中心距 ≤ `BAR_SPACING`（24px）排列——消息少时紧凑聚拢
+  （整簇在轨道内垂直居中），消息多时间距自动收缩填满整条轨道；
+  每根条条有 20×20px 的点击热区（可见的 4×14px 圆点居中），好点、好悬停
 - **点击跳转**：`row.getBoundingClientRect().top - port.getBoundingClientRect().top`
-  得到该消息在 scrollport 内的偏移，再 `port.scrollTo({ top: port.scrollTop + offset, behavior: 'smooth' })`
-  平滑滚动 —— 与 DSH 自身使用的滚动数学完全一致
+  得到该消息在 scrollport 内的偏移，滚动目标为
+  `min(max(0, scrollTop + offset - TOP_MARGIN), scrollHeight - clientHeight)`
+  —— 消息对齐视口顶部（留 8px 边距）；若下方内容不足以填满视口，
+  则钳制到最大滚动位置，让消息尽可能靠上、下方内容完整可见
 
 ### 3. 交互：白条跟随 + 悬停预览
 
@@ -149,7 +154,10 @@ git add -A && git commit -m "your change" && git push   # 同步到 GitHub
 | --- | --- | --- |
 | `GUTTER_INSET` | `6` | 条条轨道距 scrollport 左缘的像素 |
 | `GUTTER_TOP` | `16` | 轨道顶部内边距 |
-| `BAR_HEIGHT` | `14` | 单根条条的高度（px） |
+| `BAR_SPACING` | `24` | 条条中心距上限（密集排列） |
+| `HIT_SIZE` | `20` | 单根条条的点击热区（px） |
+| `BAR_HEIGHT` | `14` | 单根条条可见高度（px） |
+| `TOP_MARGIN` | `8` | 点击跳转后消息距视口顶部的边距 |
 | `PREVIEW_MAX` | `180` | 预览截断字数 |
 
 ## 📄 License
