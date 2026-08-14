@@ -1,0 +1,6 @@
+# dsh-turn-marks bundle patch: mounts the conversation turn-marks strip on the
+# left edge of the chat (browser-only plugin; no host behavior).
+# Remove this entry to disable the surface.
+- insert:
+    - id: turn-marks
+      name: 'dsh-turn-marks'
