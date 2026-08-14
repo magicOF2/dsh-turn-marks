@@ -1,6 +1,6 @@
 {
   "name": "dsh-turn-marks",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "DSH web UI plugin: a Claude Code / Codex desktop style turn-marks strip on the left edge of the conversation - one small bar per user message; click a bar to jump to that message, hover to preview it, and the bar of the message in view turns white.",
   "type": "module",
   "main": "lib/index.js",
@@ -25,6 +25,7 @@
   "files": [
     "lib/index.js",
     "lib/client.js",
+    "test/logic.test.js",
     "cordis.patch.yml",
     "README.md"
   ],

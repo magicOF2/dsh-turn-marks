@@ -6,7 +6,7 @@
 Claude Code / Codex 桌面端同款「左侧消息条条」：每发一条消息就多一根小条，
 点击跳转到该消息，悬停预览内容，当前消息对应的条条变白。
 
-[![Version](https://img.shields.io/badge/version-0.1.1-blue)](https://github.com/magicOF2/dsh-turn-marks)
+[![Version](https://img.shields.io/badge/version-0.1.2-blue)](https://github.com/magicOF2/dsh-turn-marks)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-web-lightgrey)](https://github.com/magicOF2/dsh-turn-marks)
 
@@ -99,6 +99,9 @@ dsh plugin --profile web add link:C:/Users/<你的用户名>/.dsh/external/dsh-t
 
 - 条条轨道是 **`position: fixed`** 的悬浮条，贴住 scrollport 左缘；
   用 `ResizeObserver` + `resize` 事件重新测量几何，保证窗口/布局变化后仍对齐
+- **视图守卫**：`MutationObserver`（rAF 节流）监视 scrollport 的子节点变化，
+  只有检测到 `[data-chat-flow-kind="user"]` 聊天行时才显示条条 ——
+  保证首条消息渲染后立即出现，且在「轨迹」等非聊天视图下自动隐藏
 - **密集排列**：条条按中心距 ≤ `BAR_SPACING`（24px）排列——消息少时紧凑聚拢
   （整簇在轨道内垂直居中），消息多时间距自动收缩填满整条轨道；
   每根条条有 20×20px 的点击热区（可见的 4×14px 圆点居中），好点、好悬停
@@ -122,6 +125,29 @@ dsh plugin --profile web add link:C:/Users/<你的用户名>/.dsh/external/dsh-t
   `--dsw-alias-bg-overlay`、`--dsw-alias-border-l2`），深浅色自动适配
 - 包级 `<style>` 由插件自建自删；槽位注册随插件 stop 自动移除，无残留
 
+## 🧪 测试 / Testing
+
+纯逻辑（条距、聚簇居中、滚动目标钳制、预览提取）被抽成 `_internals` 纯函数，
+可用 Node 直接对**真实 bundle 代码**跑单元测试（无需浏览器）：
+
+```sh
+node test/logic.test.js
+```
+
+覆盖内容：`previewOf`（文本拼接 / 图片标记 / 截断 / 空白折叠）、`spacingOf`
+（密集上限 / 多消息收缩）、`clusterTopOf`（垂直居中 / 不越界）、`barTopOf`
+（递增 / 在轨道内）、`scrollTargetOf`（顶部对齐 / 负值钳制 / 底部钳制）。
+
+运行时行为在开发环境验证过：槽位 `conversation.input.dock` 增量注册
+（`dyn/tmks-1 · turn-marks · order 30 · active`），与原生 todo/goal/queue 条目共存，
+无渲染错误；切换「轨迹」视图时条条自动隐藏（聊天行不存在）。
+
+## 🧩 已知限制 / Known limits
+
+- 条条只统计**已加载窗口内**的用户消息（加载更早历史后条条数会自动增加）
+- 非聊天视图（如「轨迹」）下条条自动隐藏
+- 点击跳转依赖消息行已渲染；加载更多历史时若行尚未出现，点击无效果（下次快照变化后恢复）
+
 ## 🧩 兼容性 / Compatibility
 
 - DeepSeek Harness `0.1.0-rc.6` 及以上（开发环境验证版本），Cordis `4.x`
@@ -135,6 +161,8 @@ dsh-turn-marks/
 ├── lib/
 │   ├── index.js     Host 入口（空实现，仅占位 —— 纯前端插件）
 │   └── client.js    浏览器端 bundle（__ModuleLoader__ 格式）
+├── test/
+│   └── logic.test.js 纯逻辑单元测试（node test/logic.test.js）
 ├── cordis.patch.yml profile 组合层插入条目
 ├── package.json     包清单（dsh.bundle / dsh.client 声明）
 ├── README.md
