@@ -131,12 +131,14 @@ dsh plugin --profile web add link:C:/Users/<你的用户名>/.dsh/external/dsh-t
 可用 Node 直接对**真实 bundle 代码**跑单元测试（无需浏览器）：
 
 ```sh
-node test/logic.test.js
+npm test    # 等价于 node --test(自动发现 test/logic.test.js)
 ```
 
 覆盖内容：`previewOf`（文本拼接 / 图片标记 / 截断 / 空白折叠）、`spacingOf`
 （密集上限 / 多消息收缩）、`clusterTopOf`（垂直居中 / 不越界）、`barTopOf`
-（递增 / 在轨道内）、`scrollTargetOf`（顶部对齐 / 负值钳制 / 底部钳制）。
+（递增 / 在轨道内）、`scrollTargetOf`（顶部对齐 / 负值钳制 / 底部钳制）、
+`clampIndex`（消息减少时的悬停/活动下标钳制）、`fmtTimeOf`（无效时间兜底）、
+`activeIndexOf`（活动条扫描 / 提前中断）。
 
 运行时行为在开发环境验证过：槽位 `conversation.input.dock` 增量注册
 （`dyn/tmks-1 · turn-marks · order 30 · active`），与原生 todo/goal/queue 条目共存，
