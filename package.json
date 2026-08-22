@@ -4,6 +4,9 @@
   "description": "DSH web UI plugin: a Claude Code / Codex desktop style turn-marks strip on the left edge of the conversation - one small bar per user message; click a bar to jump to that message, hover to preview it, and the bar of the message in view turns white.",
   "type": "module",
   "main": "lib/index.js",
+  "scripts": {
+    "test": "node --test test/*.test.js test/*.test.mjs"
+  },
   "exports": {
     ".": "./lib/index.js",
     "./client": "./lib/client.js",
