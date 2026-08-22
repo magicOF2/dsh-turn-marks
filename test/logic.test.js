@@ -90,5 +90,15 @@ check("clampIndex: negative becomes -1", I.clampIndex(-1, 5), -1);
 check("clampIndex: empty list always -1", I.clampIndex(0, 0), -1);
 check("clampIndex: non-integer becomes -1", I.clampIndex(1.5, 5), -1);
 
+// --- fmtTimeOf -------------------------------------------------------------
+{
+	const valid = new Date(2026, 7, 22, 14, 30, 5).getTime();
+	check("fmtTimeOf: valid timestamp renders a clock", I.fmtTimeOf(valid).length > 0, true);
+	check("fmtTimeOf: empty string", I.fmtTimeOf(""), "");
+	check("fmtTimeOf: undefined", I.fmtTimeOf(undefined), "");
+	check("fmtTimeOf: null", I.fmtTimeOf(null), "");
+	check("fmtTimeOf: garbage string", I.fmtTimeOf("not-a-date"), "");
+}
+
 console.log(failed === 0 ? "\nALL TESTS PASSED" : `\n${failed} TEST(S) FAILED`);
 process.exit(failed === 0 ? 0 : 1);
