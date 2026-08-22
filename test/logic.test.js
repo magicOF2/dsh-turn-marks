@@ -80,5 +80,15 @@ check("scrollTargetOf: never negative", I.scrollTargetOf(0, 2, 5000), 0);
 check("scrollTargetOf: clamps at max scroll", I.scrollTargetOf(100, 6000, 1000), 1000);
 check("scrollTargetOf: exact fit", I.scrollTargetOf(50, 100, 142), 142);
 
+// --- clampIndex ------------------------------------------------------------
+check("clampIndex: inside range passes through", I.clampIndex(2, 5), 2);
+check("clampIndex: first index", I.clampIndex(0, 5), 0);
+check("clampIndex: last index", I.clampIndex(4, 5), 4);
+check("clampIndex: past end becomes -1", I.clampIndex(5, 5), -1);
+check("clampIndex: far past end becomes -1", I.clampIndex(99, 5), -1);
+check("clampIndex: negative becomes -1", I.clampIndex(-1, 5), -1);
+check("clampIndex: empty list always -1", I.clampIndex(0, 0), -1);
+check("clampIndex: non-integer becomes -1", I.clampIndex(1.5, 5), -1);
+
 console.log(failed === 0 ? "\nALL TESTS PASSED" : `\n${failed} TEST(S) FAILED`);
 process.exit(failed === 0 ? 0 : 1);
