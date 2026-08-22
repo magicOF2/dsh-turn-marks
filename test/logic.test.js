@@ -100,5 +100,19 @@ check("clampIndex: non-integer becomes -1", I.clampIndex(1.5, 5), -1);
 	check("fmtTimeOf: garbage string", I.fmtTimeOf("not-a-date"), "");
 }
 
+// --- activeIndexOf ---------------------------------------------------------
+{
+	// Viewport tops are ascending while scrolling a normal flow; rows 0-2
+	// sit above the limit line, row 3 is the first one past it.
+	const tops = [100, 200, 300, 400, 500];
+	let reads = 0;
+	const topAt = (i) => { reads++; return tops[i]; };
+	check("activeIndexOf: last row at/above limit wins", I.activeIndexOf(5, topAt, 350), 2);
+	check("activeIndexOf: stops reading after first miss (early break)", reads, 4);
+	check("activeIndexOf: all above limit → last row", I.activeIndexOf(3, () => 10, 750), 2);
+	check("activeIndexOf: none above limit → -1 then caller clamps to 0", I.activeIndexOf(2, () => 999, 750), -1);
+	check("activeIndexOf: empty list → -1", I.activeIndexOf(0, () => 0, 750), -1);
+}
+
 console.log(failed === 0 ? "\nALL TESTS PASSED" : `\n${failed} TEST(S) FAILED`);
 process.exit(failed === 0 ? 0 : 1);
