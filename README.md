@@ -6,7 +6,7 @@
 Claude Code / Codex 桌面端同款「左侧消息条条」：每发一条消息就多一根小条，
 点击跳转到该消息，悬停预览内容，当前消息对应的条条变白。
 
-[![Version](https://img.shields.io/badge/version-0.1.2-blue)](https://github.com/magicOF2/dsh-turn-marks)
+[![Version](https://img.shields.io/badge/version-0.1.4-blue)](https://github.com/magicOF2/dsh-turn-marks)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-web-lightgrey)](https://github.com/magicOF2/dsh-turn-marks)
 
@@ -16,7 +16,8 @@ Claude Code / Codex 桌面端同款「左侧消息条条」：每发一条消息
 
 ## ✨ 特性 / Features
 
-- **每段一条**：你在会话里每发送一条消息（用户消息 / turn），左侧就多一根灰色小条
+- **每段一条**：你在会话里每发送一条消息（用户消息 / turn），左侧就多一根灰色小条；
+  **`/goal` 等斜杠命令输入也照样有条条**（点它跳转到你输入命令的那条气泡）
 - **密集排列**：条条间距紧凑（上限 24px），消息少时聚拢在轨道中部，消息多时自适应填满，方便点选
 - **点击跳转**：点任意一根条条，会话框平滑滚动，让那条消息**对齐视口最上方**（内容不足时尽可能靠上并完整显示下方内容）
 - **选中变白**：点击过的（以及当前正显示在视口里的）条条变成白色，其余保持灰色
@@ -85,7 +86,10 @@ dsh plugin --profile web add link:C:/Users/<你的用户名>/.dsh/external/dsh-t
 自动重新渲染），因此插件**无需任何订阅/轮询**即可拿到实时数据：
 
 - 用户消息 = `session.nodes` 中 `kind === 'user'` 的节点（`UserMessageNode`）
-- 每个节点含 `seq`（序号）、`time`（时间戳）、`content`（内容块数组）
+- **斜杠命令** = `kind === 'command'` 的节点（如 `/goal …`，一条命令一个节点，
+  含 `commandId` / `name` / `args`）——两者合起来才是「你发的话」，条条数 = 两者之和
+- 每个节点含 `seq`（序号）、`time`（时间戳）、`content`（内容块数组）；
+  命令节点的预览文本由 `/<name> <args>` 还原（与界面上的输入气泡一致）
 
 ### 2. 定位：稳定 DOM 锚点 + 滚动数学
 
@@ -94,13 +98,21 @@ dsh plugin --profile web add link:C:/Users/<你的用户名>/.dsh/external/dsh-t
 | 标记 | 含义 |
 | --- | --- |
 | `[data-conversation-scroll]` | 会话的滚动容器（scrollport） |
-| `[data-chat-flow-kind="user"]` | 每一条用户消息行 |
+| `[data-chat-flow-kind="user"]` | 每一条普通用户消息行 |
+| `[data-chat-flow-kind="command-input"]` | 斜杠命令的**输入气泡**行（如 `/goal …`，即你发的原话） |
+| `[data-chat-flow-kind="command"]` | 斜杠命令的**结果卡片**行（如「Goal created …」，不算一条「你发的话」） |
 | `[data-composer-seat]` | 底部输入区座位（用于计算条条轨道底部） |
+
+> 一条 `/goal` 在聊天流里渲染成 **输入气泡 + 结果卡片** 两行，但条条只计**一条**
+> （对应 leder 里的一个 `command` 节点）。点击该条时优先跳转到输入气泡；
+> 没有输入气泡的命令（如 `/permission`）则落到结果卡片行——定位靠
+> `data-chat-anchor-key` 的 `commandId` 后缀精确匹配，不做下标猜测。
 
 - 条条轨道是 **`position: fixed`** 的悬浮条，贴住 scrollport 左缘；
   用 `ResizeObserver` + `resize` 事件重新测量几何，保证窗口/布局变化后仍对齐
 - **视图守卫**：`MutationObserver`（rAF 节流）监视 scrollport 的子节点变化，
-  只有检测到 `[data-chat-flow-kind="user"]` 聊天行时才显示条条 ——
+  只有检测到 `[data-chat-flow-kind="user"]` / `[data-chat-flow-kind="command-input"]`
+  / `[data-chat-flow-kind="command"]` 聊天行时才显示条条 ——
   保证首条消息渲染后立即出现，且在「轨迹」等非聊天视图下自动隐藏
 - **密集排列**：条条按中心距 ≤ `BAR_SPACING`（24px）排列——消息少时紧凑聚拢
   （整簇在轨道内垂直居中），消息多时间距自动收缩填满整条轨道；
@@ -113,11 +125,13 @@ dsh plugin --profile web add link:C:/Users/<你的用户名>/.dsh/external/dsh-t
 
 ### 3. 交互：白条跟随 + 悬停预览
 
-- **点击**：跳转并把该条标记为 active（变白）
-- **滚动跟随**：监听 scrollport 的 `scroll` 事件（rAF 节流），找到视口顶部附近
-  的用户消息行，把它的条条置为白色 —— 手动滚动时白条自动同步
-- **悬停预览**：从 `content` 块中提取文本（`type: 'text'` 取 `text`，图片显示
-  `[图片]`），截断到 180 字，用固定定位气泡显示在条条右侧
+- **点击**：跳转（普通消息 → 对应 `user` 行；斜杠命令 → 优先输入气泡、
+  无气泡则结果卡片）并把该条标记为 active（变白）
+- **滚动跟随**：监听 scrollport 的 `scroll` 事件（rAF 节流），找到视口顶部附近的
+  用户消息行 / 命令输入行，把它的条条置为白色 —— 手动滚动时白条自动同步
+- **悬停预览**：普通消息从 `content` 块中提取文本（`type: 'text'` 取 `text`，图片显示
+  `[图片]`），斜杠命令按 `/<name> <args>` 还原原始输入（与界面上的命令输入气泡一致），
+  截断到 180 字，用固定定位气泡显示在条条右侧
 
 ### 4. 主题与生命周期
 
@@ -134,7 +148,9 @@ dsh plugin --profile web add link:C:/Users/<你的用户名>/.dsh/external/dsh-t
 npm test    # 等价于 node --test(自动发现 test/logic.test.js)
 ```
 
-覆盖内容：`previewOf`（文本拼接 / 图片标记 / 截断 / 空白折叠）、`spacingOf`
+覆盖内容：`previewOf`（文本拼接 / 图片标记 / 截断 / 空白折叠）、`turnNodesOf`
+（用户消息 + 斜杠命令合并计数、顺序保持、剔除命令结果卡等非消息节点）、`timeOf` /
+`messagePreviewOf`（`/name args` 命令预览还原、空参数/缺名兜底、截断）、`spacingOf`
 （密集上限 / 多消息收缩）、`clusterTopOf`（垂直居中 / 不越界）、`barTopOf`
 （递增 / 在轨道内）、`scrollTargetOf`（顶部对齐 / 负值钳制 / 底部钳制）、
 `clampIndex`（消息减少时的悬停/活动下标钳制）、`fmtTimeOf`（无效时间兜底）、
@@ -146,9 +162,11 @@ npm test    # 等价于 node --test(自动发现 test/logic.test.js)
 
 ## 🧩 已知限制 / Known limits
 
-- 条条只统计**已加载窗口内**的用户消息（加载更早历史后条条数会自动增加）
+- 条条只统计**已加载窗口内**的用户消息与斜杠命令（加载更早历史后条条数会自动增加）
 - 非聊天视图（如「轨迹」）下条条自动隐藏
 - 点击跳转依赖消息行已渲染；加载更多历史时若行尚未出现，点击无效果（下次快照变化后恢复）
+- 一条斜杠命令只计一根条条（输入气泡优先跳转，结果卡片不算独立消息）；
+  无输入气泡的命令（如 `/permission`）条条对应其结果卡片行
 
 ## 🧩 兼容性 / Compatibility
 
@@ -200,7 +218,8 @@ git add -A && git commit -m "your change" && git push   # 同步到 GitHub
 
 A lightweight **DSH (DeepSeek Harness) web plugin** that adds a
 **Claude Code / Codex desktop style "turn marks" strip** to the left edge of the
-conversation: one small gray bar per user message (turn). Click a bar to
+conversation: one small gray bar per user message (turn) — including
+**slash-command inputs like `/goal`**, which get a bar of their own. Click a bar to
 smooth-scroll the chat to that message and turn it **white**; hover a bar to see
 a **preview** of that message (number, time, first 180 chars). The white bar
 also follows your manual scrolling automatically.

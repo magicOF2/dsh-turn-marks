@@ -44,6 +44,48 @@ check("previewOf: unknown block", I.previewOf([{ type: "weird" }]), "[内容]");
 check("previewOf: truncates long text", I.previewOf([{ type: "text", text: "x".repeat(300) }]).endsWith("…"), true);
 check("previewOf: collapses whitespace", I.previewOf([{ type: "text", text: "a\n\n  b" }]), "a b");
 
+// --- TURN_KINDS / turnNodesOf -------------------------------------------
+check("TURN_KINDS: user + command exactly", JSON.stringify(I.TURN_KINDS), JSON.stringify(["user", "command"]));
+{
+	const nodes = [
+		{ kind: "assistant-step", key: "a" },
+		{ kind: "user", key: "u1", content: [{ type: "text", text: "hi" }] },
+		{ kind: "tool-call", key: "t" },
+		{ kind: "command", key: "c1", commandId: "cmd-1", name: "goal", args: " 今天的目标" },
+		{ kind: "command-input", key: "c1b" },
+		{ kind: "context", key: "x" },
+		{ kind: "user", key: "u2", content: [] }
+	];
+	const turns = I.turnNodesOf(nodes);
+	check("turnNodesOf: keeps user and command in order", turns.map((n) => n.key).join(","), "u1,c1,u2");
+	check("turnNodesOf: drops command-input/assistant/context kinds", turns.length, 3);
+}
+check("turnNodesOf: null node skipped", I.turnNodesOf([null, { kind: "user" }, undefined]).length, 1);
+check("turnNodesOf: non-array input", I.turnNodesOf(null).length, 0);
+check("turnNodesOf: bare array with non-objects", I.turnNodesOf(["user", 42, { kind: "command" }]).length, 1);
+
+// --- timeOf / messagePreviewOf --------------------------------------------
+check("timeOf: plain user node top-level time", I.timeOf({ kind: "user", time: 123 }), 123);
+check("timeOf: command node top-level time", I.timeOf({ kind: "command", time: 456 }), 456);
+check("timeOf: top-level null falls back to data time", I.timeOf({ kind: "command", time: null, data: { time: 7 } }), 7);
+check("timeOf: no time anywhere", I.timeOf({ kind: "command", data: {} }), undefined);
+check("timeOf: non-object", I.timeOf("x"), undefined);
+check("messagePreviewOf: /goal command shows /name + args", I.messagePreviewOf({ kind: "command", name: "goal", args: " 优化日程软件" }), "/goal 优化日程软件");
+check("messagePreviewOf: command without args", I.messagePreviewOf({ kind: "command", name: "goal", args: null }), "/goal");
+check("messagePreviewOf: command with empty args", I.messagePreviewOf({ kind: "command", name: "goal", args: "   " }), "/goal");
+check("messagePreviewOf: command missing name", I.messagePreviewOf({ kind: "command", commandId: "cmd-1" }), "/command");
+check("messagePreviewOf: command truncates", I.messagePreviewOf({ kind: "command", name: "goal", args: "x".repeat(300) }).endsWith("…"), true);
+check("messagePreviewOf: user node falls back to previewOf", I.messagePreviewOf({ kind: "user", content: [{ type: "image" }] }), "[图片]");
+check("messagePreviewOf: non-object", I.messagePreviewOf(null), "");
+
+// --- commandSuffixSelector --------------------------------------------------
+check("commandSuffixSelector: plain id", I.commandSuffixSelector("cmd-8dfa4824-7"), '[data-chat-anchor-key$="cmd-8dfa4824-7"]');
+check("commandSuffixSelector: rejects quote", I.commandSuffixSelector('cmd"x'), null);
+check("commandSuffixSelector: rejects backslash", I.commandSuffixSelector("cmd\\x"), null);
+check("commandSuffixSelector: rejects space", I.commandSuffixSelector("cmd x"), null);
+check("commandSuffixSelector: rejects empty", I.commandSuffixSelector(""), null);
+check("commandSuffixSelector: rejects non-string", I.commandSuffixSelector(42), null);
+
 // --- spacingOf -----------------------------------------------------------
 check("spacingOf: caps at BAR_SPACING for few bars", I.spacingOf(600, 7), I.BAR_SPACING);
 check("spacingOf: shrinks when many bars", I.spacingOf(120, 20), 6);
